@@ -15,6 +15,8 @@ received_packets = False
 got_error = False
 error_text = ""
 usbpcap_process = None
+do_xfade = True
+xfade_shape = 1
 
 split_label = None
 split_progress = None
@@ -36,6 +38,15 @@ def find_device():
                 for dev_match in re.finditer(value_num, dev):
                     return (iface, dev_match.group(1), dev_match.group(2))
 
+def convert_xfade(val):
+    if xfade_shape == 1:
+        if val <= 50:
+            return val / 50
+        else:
+            return 1
+    else:
+        return val / 100
+                
 def pipe_reader():
     global volume_val
     global split_val
@@ -97,7 +108,9 @@ def pipe_reader():
         for session in sessions:
             volume = session._ctl.QueryInterface(ISimpleAudioVolume)
             if session.Process and session.Process.name() == process_name:
-                volume.SetMasterVolume(split_val / 100, None)
+                volume.SetMasterVolume(convert_xfade(split_val), None)
+            elif do_xfade:
+                volume.SetMasterVolume(convert_xfade(100 - split_val), None)
 
 def tick():
     usbpcap_process.poll()
